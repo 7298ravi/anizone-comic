@@ -100,7 +100,7 @@ const detailController = {
       //                                  chapterList:[{title,slug,date}] } }
       const comic = res?.detail ?? res;
 
-      const chaps = comic?.chapterList ?? comic?.chapters ?? [];
+      const chaps = comic?.chapters ?? comic?.chapterList ?? [];
       this.chapters = chaps;
 
       const merged = {

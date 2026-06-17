@@ -16,7 +16,7 @@ const api = {
 
   // BacaKomik selalu pakai komiklist[]
   extractList(data) {
-    return data?.komiklist ?? data?.results ?? data?.data ?? (Array.isArray(data) ? data : []);
+    return data?.komikList ?? data?.komiklist ?? data?.results ?? data?.data ?? (Array.isArray(data) ? data : []);
   },
 
   // BacaKomik pakai hasNextPage (boolean), bukan totalPages

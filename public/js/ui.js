@@ -114,7 +114,7 @@ const ui = {
       ? chapters.map((ch, i) => {
           // BacaKomik chapterList: { title, slug, date }
           const cSlug = ch.slug  || '';
-          const name  = ch.title || ch.name || `Chapter ${i + 1}`;
+          const name  = ch.title || ch.name || ch.slug || `Chapter ${i + 1}`;
           const date  = ch.date  || ch.released || '';
           const safe  = cSlug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
           return `

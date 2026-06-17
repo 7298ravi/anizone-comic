@@ -3,58 +3,36 @@
    ============================================= */
 
 const ui = {
-  // ---- Helpers ----
+  el(id) { return document.getElementById(id); },
 
-  /** Get element by ID */
-  el(id) {
-    return document.getElementById(id);
-  },
-
-  /** Show loading spinner inside a grid container */
   loading(containerId) {
     this.el(containerId).innerHTML = `
-      <div class="loading">
-        <div class="spinner"></div>
-        Memuat...
-      </div>`;
+      <div class="loading"><div class="spinner"></div>Memuat...</div>`;
   },
 
-  /** Show error message inside a grid container */
   error(containerId, msg = 'Gagal memuat data') {
-    this.el(containerId).innerHTML = `
-      <div class="error-msg">⚠️ ${msg}</div>`;
+    this.el(containerId).innerHTML = `<div class="error-msg">⚠️ ${msg}</div>`;
   },
 
-  // ---- Badges ----
-
-  /** Returns HTML for a type badge (manga/manhwa/manhua) */
   typeBadge(type = '') {
     if (!type) return '';
     const t = type.toLowerCase();
-    const cls = t === 'manga' ? 'badge-manga'
-              : t === 'manhwa' ? 'badge-manhwa'
-              : 'badge-manhua';
+    const cls = t === 'manga' ? 'badge-manga' : t === 'manhwa' ? 'badge-manhwa' : 'badge-manhua';
     return `<span class="badge ${cls}">${type}</span>`;
   },
 
-  // ---- Comic Card ----
-
-  /**
-   * Render a single comic card
-   * @param {Object} comic
-   * @returns {string} HTML string
-   */
   comicCard(comic) {
-    // Ekstrak slug/link untuk navigasi ke detail
-    // Prioritaskan 'link' (seperti di Juju) atau 'slug', bukan ID numerik
-    const slug  = comic.link || comic.slug || comic.komik_id || comic.id || '';
     const title = comic.title || comic.judul || comic.name || 'Tanpa Judul';
     const thumb = comic.thumbnail || comic.cover || comic.image || '';
     const type  = comic.type || comic.tipe || '';
     const chap  = comic.latest_chapter || comic.chapter || '';
 
-    // Escape untuk pemakaian dalam onclick string
-    const safeSlug = slug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    // Ambil raw link dari API lalu bersihkan prefix-nya
+    // API terbaru pakai comic.link, populer/browse mungkin pakai comic.slug / comic.komik_id
+    const rawLink = comic.link || comic.detailUrl || comic.href || comic.slug || comic.komik_id || comic.id || '';
+    const cleanSlug = api.cleanLink(rawLink);
+
+    const safeSlug  = cleanSlug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const safeTitle = title.replace(/"/g, '&quot;');
 
     return `
@@ -73,11 +51,6 @@ const ui = {
       </div>`;
   },
 
-  /**
-   * Render array of comics into a grid container
-   * @param {string} containerId
-   * @param {Array}  comics
-   */
   renderGrid(containerId, comics) {
     const el = this.el(containerId);
     if (!comics || comics.length === 0) {
@@ -87,37 +60,22 @@ const ui = {
     el.innerHTML = comics.map(c => this.comicCard(c)).join('');
   },
 
-  // ---- Pagination ----
-
-  /**
-   * Render pagination buttons
-   * @param {string}   containerId
-   * @param {number}   current
-   * @param {number}   total
-   * @param {Function} onPage - callback(pageNumber)
-   */
   renderPagination(containerId, current, total, onPage) {
     const el = this.el(containerId);
     const clamped = Math.min(total, 20);
     const start   = Math.max(1, current - 2);
     const end     = Math.min(clamped, current + 2);
-
     let html = '';
 
     if (start > 1) {
       html += btn(1, current, onPage);
-      if (start > 2) html += '<span class="page-ellipsis" style="color:var(--muted);padding:0 0.25rem">…</span>';
+      if (start > 2) html += '<span style="color:var(--muted);padding:0 0.25rem">…</span>';
     }
-
-    for (let i = start; i <= end; i++) {
-      html += btn(i, current, onPage);
-    }
-
+    for (let i = start; i <= end; i++) html += btn(i, current, onPage);
     if (end < clamped) {
-      if (end < clamped - 1) html += '<span class="page-ellipsis" style="color:var(--muted);padding:0 0.25rem">…</span>';
+      if (end < clamped - 1) html += '<span style="color:var(--muted);padding:0 0.25rem">…</span>';
       html += btn(clamped, current, onPage);
     }
-
     el.innerHTML = html;
 
     function btn(page, cur, cb) {
@@ -126,22 +84,13 @@ const ui = {
     }
   },
 
-  // ---- Detail View ----
-
-  /**
-   * Render full comic detail (header + chapter list)
-   * @param {Object} comic    - API response data
-   * @param {Array}  chapters - chapter list
-   * @param {Function} onChapter - callback(link, index)
-   */
   renderDetail(comic, chapters, onChapter) {
     const title    = comic.title || comic.judul || 'Tanpa Judul';
     const thumb    = comic.thumbnail || comic.cover || comic.image || '';
     const type     = comic.type || comic.tipe || '';
     const status   = comic.status || '';
     const synopsis = comic.synopsis || comic.sinopsis || comic.description || '';
-    const genres   = Array.isArray(comic.genres || comic.genre)
-                     ? (comic.genres || comic.genre) : [];
+    const genres   = Array.isArray(comic.genres || comic.genre) ? (comic.genres || comic.genre) : [];
 
     const genreHTML = genres
       .map(g => `<span class="badge badge-genre">${typeof g === 'object' ? g.name || g : g}</span>`)
@@ -149,14 +98,13 @@ const ui = {
 
     const chaptersHTML = chapters.length > 0
       ? chapters.map((ch, i) => {
-          // Prioritaskan link (seperti Juju), baru fallback ke slug/id
+          // Juju: ch.link adalah path chapter, ch.chapter adalah nomor/nama
           const cLink = ch.link || ch.slug || ch.chapter_id || ch.id || '';
           const name  = ch.chapter || ch.name || ch.title || `Chapter ${i + 1}`;
           const date  = ch.date || ch.released || ch.updated_on || '';
-          // Escape untuk onclick string
-          const safeLink = cLink.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          const safe  = cLink.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
           return `
-            <div class="chapter-item" onclick="(${onChapter.toString()})('${safeLink}', ${i})">
+            <div class="chapter-item" onclick="(${onChapter.toString()})('${safe}', ${i})">
               <span class="chapter-name">${name}</span>
               <span class="chapter-date">${date}</span>
             </div>`;
@@ -180,19 +128,11 @@ const ui = {
           ${synopsis ? `<div class="detail-synopsis">${synopsis}</div>` : ''}
         </div>
       </div>
-
       <div class="chapter-list-header">📋 ${chapters.length} Chapter</div>
       <div class="chapter-list">${chaptersHTML}</div>
     `;
   },
 
-  // ---- Reader ----
-
-  /**
-   * Render chapter images into reader
-   * @param {string} containerId
-   * @param {Array}  images
-   */
   renderReader(containerId, images) {
     const el = this.el(containerId);
     if (!images || images.length === 0) {
@@ -202,12 +142,9 @@ const ui = {
     el.innerHTML = images.map((img, idx) => {
       const src = typeof img === 'string' ? img : img.src || img.url || img.image || '';
       if (!src) return '';
-      return `<img
-        src="${src}"
-        alt="Halaman ${idx + 1}"
+      return `<img src="${src}" alt="Halaman ${idx + 1}"
         loading="${idx < 2 ? 'eager' : 'lazy'}"
-        onerror="this.style.display='none'"
-      >`;
+        onerror="this.style.display='none'">`;
     }).filter(Boolean).join('');
   },
 };

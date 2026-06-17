@@ -1,6 +1,7 @@
 /* =============================================
    API.JS — Centralized API Layer
    Base URL: https://www.sankavollerei.web.id
+   Source: Komikindo endpoints
    ============================================= */
 
 const API_BASE = 'https://www.sankavollerei.web.id';
@@ -13,53 +14,42 @@ const api = {
   },
 
   extractList(data) {
-    return data?.data ?? data?.komik ?? data?.comics ?? (Array.isArray(data) ? data : []);
+    return data?.data ?? data?.komik ?? data?.comics ?? data?.results ?? (Array.isArray(data) ? data : []);
   },
 
-  /**
-   * Bersihkan link dari API jadi slug untuk endpoint detail.
-   * API mengembalikan link seperti "/manga/judul" atau "/plus/judul" atau "/detail-komik/judul"
-   * Endpoint detail butuh: /comic/comic/judul  (tanpa prefix)
-   */
-  cleanLink(link) {
-    if (!link) return '';
-    return link
-      .replace(/^\/manga\//, '/')
-      .replace(/^\/plus\//, '/')
-      .replace(/^\/detail-komik\//, '/')
-      .replace(/^\//, ''); // hapus leading slash
+  // GET /comic/komikindo/latest/:page
+  getLatest(page = 1) {
+    return this.fetch(`/comic/komikindo/latest/${page}`);
   },
 
-  getLatest()  { return this.fetch('/comic/terbaru'); },
-  getPopular() { return this.fetch('/comic/populer'); },
-  getTrending(){ return this.fetch('/comic/trending'); },
-
-  getBrowse({ type = '', order = 'update', page = 1 } = {}) {
-    let url = `/comic/browse?page=${page}&order=${order}`;
-    if (type) url += `&type=${type}`;
-    return this.fetch(url);
+  // GET /comic/komikindo/library (support filter genre, type, search via query string)
+  getLibrary({ genre = '', type = '', search = '', page = 1 } = {}) {
+    const params = new URLSearchParams();
+    if (genre)  params.set('genre', genre);
+    if (type)   params.set('type', type);
+    if (search) params.set('search', search);
+    if (page > 1) params.set('page', page);
+    const qs = params.toString();
+    return this.fetch(`/comic/komikindo/library${qs ? '?' + qs : ''}`);
   },
 
-  search(query) {
-    return this.fetch(`/comic/search?q=${encodeURIComponent(query)}`);
+  // GET /comic/komikindo/genres
+  getGenres() {
+    return this.fetch('/comic/komikindo/genres');
   },
 
-  /**
-   * Detail komik. Terima slug SUDAH bersih (tanpa prefix /manga/ dsb).
-   */
+  // GET /comic/komikindo/search/:query/:page
+  search(query, page = 1) {
+    return this.fetch(`/comic/komikindo/search/${encodeURIComponent(query)}/${page}`);
+  },
+
+  // GET /comic/komikindo/detail/:slug
   getDetail(slug) {
-    const clean = this.cleanLink(slug);
-    return this.fetch(`/comic/comic/${clean}`);
+    return this.fetch(`/comic/komikindo/detail/${slug}`);
   },
 
-  /**
-   * Gambar chapter. chapterLink dari API biasanya sudah berupa path lengkap.
-   */
-  getChapter(chapterLink) {
-    const path = chapterLink.startsWith('/') ? chapterLink : '/' + chapterLink;
-    return this.fetch(`/comic/chapter${path}`);
+  // GET /comic/komikindo/chapter/:slug
+  getChapter(slug) {
+    return this.fetch(`/comic/komikindo/chapter/${slug}`);
   },
-
-  getGenres()   { return this.fetch('/comic/genres'); },
-  getHomepage() { return this.fetch('/comic/homepage'); },
 };

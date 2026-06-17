@@ -6,8 +6,8 @@ const ui = {
   el(id) { return document.getElementById(id); },
 
   loading(containerId) {
-    this.el(containerId).innerHTML = `
-      <div class="loading"><div class="spinner"></div>Memuat...</div>`;
+    this.el(containerId).innerHTML =
+      `<div class="loading"><div class="spinner"></div>Memuat...</div>`;
   },
 
   error(containerId, msg = 'Gagal memuat data') {
@@ -25,14 +25,11 @@ const ui = {
     const title = comic.title || comic.judul || comic.name || 'Tanpa Judul';
     const thumb = comic.thumbnail || comic.cover || comic.image || '';
     const type  = comic.type || comic.tipe || '';
-    const chap  = comic.latest_chapter || comic.chapter || '';
+    const chap  = comic.latest_chapter || comic.chapter || comic.latestChapter || '';
+    // Komikindo pakai field 'slug' langsung
+    const slug  = comic.slug || comic.komik_id || comic.id || '';
 
-    // Ambil raw link dari API lalu bersihkan prefix-nya
-    // API terbaru pakai comic.link, populer/browse mungkin pakai comic.slug / comic.komik_id
-    const rawLink = comic.link || comic.detailUrl || comic.href || comic.slug || comic.komik_id || comic.id || '';
-    const cleanSlug = api.cleanLink(rawLink);
-
-    const safeSlug  = cleanSlug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeSlug  = slug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const safeTitle = title.replace(/"/g, '&quot;');
 
     return `
@@ -66,7 +63,6 @@ const ui = {
     const start   = Math.max(1, current - 2);
     const end     = Math.min(clamped, current + 2);
     let html = '';
-
     if (start > 1) {
       html += btn(1, current, onPage);
       if (start > 2) html += '<span style="color:var(--muted);padding:0 0.25rem">…</span>';
@@ -77,7 +73,6 @@ const ui = {
       html += btn(clamped, current, onPage);
     }
     el.innerHTML = html;
-
     function btn(page, cur, cb) {
       return `<button class="page-btn${page === cur ? ' active' : ''}"
                       onclick="(${cb.toString()})(${page})">${page}</button>`;
@@ -90,7 +85,8 @@ const ui = {
     const type     = comic.type || comic.tipe || '';
     const status   = comic.status || '';
     const synopsis = comic.synopsis || comic.sinopsis || comic.description || '';
-    const genres   = Array.isArray(comic.genres || comic.genre) ? (comic.genres || comic.genre) : [];
+    const genres   = Array.isArray(comic.genres || comic.genre)
+                     ? (comic.genres || comic.genre) : [];
 
     const genreHTML = genres
       .map(g => `<span class="badge badge-genre">${typeof g === 'object' ? g.name || g : g}</span>`)
@@ -98,11 +94,11 @@ const ui = {
 
     const chaptersHTML = chapters.length > 0
       ? chapters.map((ch, i) => {
-          // Juju: ch.link adalah path chapter, ch.chapter adalah nomor/nama
-          const cLink = ch.link || ch.slug || ch.chapter_id || ch.id || '';
-          const name  = ch.chapter || ch.name || ch.title || `Chapter ${i + 1}`;
+          // Komikindo: chapter punya field 'slug' untuk endpoint chapter
+          const cSlug = ch.slug || ch.chapter_id || ch.id || '';
+          const name  = ch.title || ch.chapter || ch.name || `Chapter ${i + 1}`;
           const date  = ch.date || ch.released || ch.updated_on || '';
-          const safe  = cLink.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          const safe  = cSlug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
           return `
             <div class="chapter-item" onclick="(${onChapter.toString()})('${safe}', ${i})">
               <span class="chapter-name">${name}</span>

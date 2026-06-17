@@ -14,16 +14,15 @@
 </head>
 <body>
 
-  <!-- SCROLL PROGRESS BAR (reader) -->
+  <!-- SCROLL PROGRESS BAR -->
   <div id="reader-progress-bar"></div>
 
   <!-- NAVBAR -->
   <nav id="navbar">
-    <div class="logo" onclick="router.go('home')">AniZone</div>
+    <div class="logo" onclick="homeController.load()">AniZone</div>
     <div class="nav-links">
-      <button class="nav-btn" id="nav-home"     onclick="homeController.load()">Home</button>
-      <button class="nav-btn" id="nav-browse"   onclick="browseController.load()">Browse</button>
-      <button class="nav-btn" id="nav-trending" onclick="trendingController.load()">Trending</button>
+      <button class="nav-btn" id="nav-home"    onclick="homeController.load()">Home</button>
+      <button class="nav-btn" id="nav-browse"  onclick="browseController.load()">Library</button>
     </div>
     <div class="search-bar">
       <input type="text" id="search-input" placeholder="Cari manga..."
@@ -36,19 +35,17 @@
     <!-- HOME -->
     <div id="view-home" class="view">
       <div class="section-header">
-        <div class="section-title">🕐 Terbaru</div>
-        <button class="see-more" onclick="browseController.load()">Lihat semua →</button>
+        <div class="section-title">🕐 Komik Terbaru</div>
       </div>
       <div class="comic-grid" id="grid-latest"></div>
-
-      <div class="section-header" style="margin-top:2rem">
-        <div class="section-title">🔥 Populer</div>
-      </div>
-      <div class="comic-grid" id="grid-popular"></div>
+      <div class="pagination" id="home-pages"></div>
     </div>
 
-    <!-- BROWSE -->
+    <!-- LIBRARY / BROWSE -->
     <div id="view-browse" class="view" style="display:none">
+      <div class="section-header">
+        <div class="section-title">📚 Library</div>
+      </div>
       <div class="filter-row" id="type-filter">
         <button class="filter-chip active" onclick="browseController.setType('',this)">Semua</button>
         <button class="filter-chip" onclick="browseController.setType('manga',this)">Manga</button>
@@ -59,14 +56,6 @@
       <div class="pagination" id="browse-pages"></div>
     </div>
 
-    <!-- TRENDING -->
-    <div id="view-trending" class="view" style="display:none">
-      <div class="section-header">
-        <div class="section-title">🔥 Trending Comics</div>
-      </div>
-      <div class="comic-grid" id="grid-trending"></div>
-    </div>
-
     <!-- SEARCH -->
     <div id="view-search" class="view" style="display:none">
       <button class="back-btn" onclick="router.back()">← Kembali</button>
@@ -74,6 +63,7 @@
         <div class="section-title" id="search-heading">Hasil Pencarian</div>
       </div>
       <div class="comic-grid" id="grid-search"></div>
+      <div class="pagination" id="search-pages"></div>
     </div>
 
     <!-- DETAIL -->

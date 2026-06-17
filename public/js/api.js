@@ -66,18 +66,23 @@ const api = {
 
   /**
    * Detail komik + daftar chapter
-   * @param {string} slug
+   * @param {string} slug - bisa berupa slug atau link path
    */
   getDetail(slug) {
-    return this.fetch(`/comic/comic/${slug}`);
+    // Bersihkan slash di awal kalau ada
+    const clean = slug.startsWith('/') ? slug.substring(1) : slug;
+    return this.fetch(`/comic/comic/${clean}`);
   },
 
   /**
    * Gambar-gambar dalam satu chapter
-   * @param {string} slug
+   * @param {string} chapterLink - link/path chapter, misal "/judul-manga/chapter-1"
    */
-  getChapter(slug) {
-    return this.fetch(`/comic/chapter/${slug}`);
+  getChapter(chapterLink) {
+    // Pastikan chapterLink dipakai langsung sebagai path (seperti di Juju)
+    // Kalau sudah ada slash di awal, langsung pakai; kalau tidak, tambahkan
+    const path = chapterLink.startsWith('/') ? chapterLink : '/' + chapterLink;
+    return this.fetch(`/comic/chapter${path}`);
   },
 
   /** List semua genre */

@@ -45,13 +45,16 @@ const ui = {
    * @returns {string} HTML string
    */
   comicCard(comic) {
-    const slug  = comic.slug || comic.komik_id || comic.id || '';
+    // Ekstrak slug/link untuk navigasi ke detail
+    // Prioritaskan 'link' (seperti di Juju) atau 'slug', bukan ID numerik
+    const slug  = comic.link || comic.slug || comic.komik_id || comic.id || '';
     const title = comic.title || comic.judul || comic.name || 'Tanpa Judul';
     const thumb = comic.thumbnail || comic.cover || comic.image || '';
     const type  = comic.type || comic.tipe || '';
     const chap  = comic.latest_chapter || comic.chapter || '';
 
-    const safeSlug = slug.replace(/'/g, "\\'");
+    // Escape untuk pemakaian dalam onclick string
+    const safeSlug = slug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const safeTitle = title.replace(/"/g, '&quot;');
 
     return `
@@ -129,7 +132,7 @@ const ui = {
    * Render full comic detail (header + chapter list)
    * @param {Object} comic    - API response data
    * @param {Array}  chapters - chapter list
-   * @param {Function} onChapter - callback(slug, index)
+   * @param {Function} onChapter - callback(link, index)
    */
   renderDetail(comic, chapters, onChapter) {
     const title    = comic.title || comic.judul || 'Tanpa Judul';
@@ -146,12 +149,14 @@ const ui = {
 
     const chaptersHTML = chapters.length > 0
       ? chapters.map((ch, i) => {
-          const cSlug = ch.slug || ch.chapter_id || ch.id || '';
+          // Prioritaskan link (seperti Juju), baru fallback ke slug/id
+          const cLink = ch.link || ch.slug || ch.chapter_id || ch.id || '';
           const name  = ch.chapter || ch.name || ch.title || `Chapter ${i + 1}`;
-          const date  = ch.date || ch.released || '';
-          const safe  = cSlug.replace(/'/g, "\\'");
+          const date  = ch.date || ch.released || ch.updated_on || '';
+          // Escape untuk onclick string
+          const safeLink = cLink.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
           return `
-            <div class="chapter-item" onclick="(${onChapter.toString()})('${safe}', ${i})">
+            <div class="chapter-item" onclick="(${onChapter.toString()})('${safeLink}', ${i})">
               <span class="chapter-name">${name}</span>
               <span class="chapter-date">${date}</span>
             </div>`;
@@ -194,9 +199,15 @@ const ui = {
       el.innerHTML = '<div class="error-msg">Tidak ada gambar untuk chapter ini.</div>';
       return;
     }
-    el.innerHTML = images.map(img => {
+    el.innerHTML = images.map((img, idx) => {
       const src = typeof img === 'string' ? img : img.src || img.url || img.image || '';
-      return src ? `<img src="${src}" alt="" loading="lazy">` : '';
+      if (!src) return '';
+      return `<img
+        src="${src}"
+        alt="Halaman ${idx + 1}"
+        loading="${idx < 2 ? 'eager' : 'lazy'}"
+        onerror="this.style.display='none'"
+      >`;
     }).filter(Boolean).join('');
   },
 };

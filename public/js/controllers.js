@@ -141,7 +141,7 @@ const detailController = {
       ui.el('detail-content').innerHTML = ui.renderDetail(
         comic,
         chaps,
-        (chapSlug, idx) => readerController.open(chapSlug, idx)
+        (chapLink, idx) => readerController.open(chapLink, idx)
       );
     } catch (e) {
       ui.el('detail-content').innerHTML =
@@ -154,8 +154,8 @@ const detailController = {
 const readerController = {
   currentIndex: 0,
 
-  async open(chapSlug, index) {
-    if (!chapSlug) return;
+  async open(chapLink, index) {
+    if (!chapLink) return;
     this.currentIndex = index;
 
     router.go('reader');
@@ -164,11 +164,17 @@ const readerController = {
     this.updateNav();
 
     const chap = detailController.chapters[index];
-    ui.el('reader-title').textContent = chap?.chapter || chap?.name || `Chapter ${index + 1}`;
+    ui.el('reader-title').textContent = chap?.chapter || chap?.name || chap?.title || `Chapter ${index + 1}`;
 
     try {
-      const data   = await api.getChapter(chapSlug);
+      const data   = await api.getChapter(chapLink);
+      // Dukung berbagai format response: { images }, { data }, { pages }, atau array langsung
+      // Juga cek { navigation } untuk prev/next chapter (seperti di Juju)
       const images = data?.images ?? data?.data ?? data?.pages ?? (Array.isArray(data) ? data : []);
+      
+      // Simpan navigation data kalau ada (prev/next dari API)
+      this._navigation = data?.navigation || null;
+      
       ui.renderReader('reader-images', images);
     } catch (e) {
       ui.el('reader-images').innerHTML =
@@ -178,19 +184,38 @@ const readerController = {
 
   /**
    * Navigate to previous (-1) or next (1) chapter
-   * Chapter list is newest-first, so:
-   *   -1 = sebelumnya → index++
-   *    1 = selanjutnya → index--
+   * Prioritas: gunakan navigation data dari API (seperti Juju), kalau tidak ada pakai index list
    */
   navigate(dir) {
+    // Coba pakai navigation dari API response dulu
+    if (this._navigation) {
+      const targetLink = dir === 1 ? this._navigation.nextChapter : this._navigation.previousChapter;
+      if (targetLink) {
+        // Cari index di chapter list berdasarkan link
+        const chapters = detailController.chapters;
+        const newIdx = chapters.findIndex(ch => {
+          const link = ch.link || ch.slug || ch.chapter_id || ch.id || '';
+          return link === targetLink || link.includes(targetLink) || targetLink.includes(link);
+        });
+        window.scrollTo(0, 0);
+        this.open(targetLink, newIdx !== -1 ? newIdx : this.currentIndex);
+        return;
+      }
+    }
+
+    // Fallback: navigasi berdasarkan index di chapter list
+    // Chapter list biasanya newest-first, jadi:
+    //   dir=1 (next/selanjutnya) → index-- (chapter lebih lama, nomor lebih kecil di array)
+    //   dir=-1 (prev/sebelumnya) → index++ (chapter lebih baru, nomor lebih besar di array)
     const newIdx = this.currentIndex - dir;
     const chapters = detailController.chapters;
     if (newIdx < 0 || newIdx >= chapters.length) return;
 
     const ch   = chapters[newIdx];
-    const slug = ch.slug || ch.chapter_id || ch.id || '';
+    // Gunakan link terlebih dahulu (seperti Juju), baru fallback ke slug/id
+    const link = ch.link || ch.slug || ch.chapter_id || ch.id || '';
     window.scrollTo(0, 0);
-    this.open(slug, newIdx);
+    this.open(link, newIdx);
   },
 
   updateNav() {

@@ -6,7 +6,7 @@
 const homeController = {
   async load() {
     router.go('home');
-    this.loadLatest();
+    this.loadLatest(1);
   },
 
   async loadLatest(page = 1) {
@@ -16,8 +16,9 @@ const homeController = {
       const comics = api.extractList(data);
       ui.renderGrid('grid-latest', comics);
 
-      const total = data?.total_pages || data?.totalPages || 1;
-      ui.renderPagination('home-pages', page, total, (p) => homeController.loadLatest(p));
+      const total = api.extractTotalPages(data);
+      ui.renderPagination('home-pages', page, total,
+        (p) => homeController.loadLatest(p));
     } catch (e) {
       ui.error('grid-latest', `Gagal memuat komik terbaru: ${e.message}`);
     }
@@ -26,9 +27,9 @@ const homeController = {
 
 /* ---- LIBRARY / BROWSE ---- */
 const browseController = {
-  genre:  '',
-  type:   '',
-  page:   1,
+  genre: '',
+  type:  '',
+  page:  1,
 
   async load() {
     router.go('browse');
@@ -36,7 +37,8 @@ const browseController = {
   },
 
   setType(type, btnEl) {
-    document.querySelectorAll('#type-filter .filter-chip').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#type-filter .filter-chip')
+      .forEach(b => b.classList.remove('active'));
     btnEl.classList.add('active');
     this.type = type;
     this.page = 1;
@@ -50,7 +52,7 @@ const browseController = {
       const comics = api.extractList(data);
       ui.renderGrid('grid-browse', comics);
 
-      const total = data?.total_pages || data?.totalPages || 1;
+      const total = api.extractTotalPages(data);
       const page  = this.page;
       ui.renderPagination('browse-pages', page, total, (p) => {
         browseController.page = p;
@@ -83,8 +85,9 @@ const searchController = {
       const comics = api.extractList(data);
       ui.renderGrid('grid-search', comics);
 
-      const total = data?.total_pages || data?.totalPages || 1;
-      ui.renderPagination('search-pages', page, total, (p) => searchController.run(p));
+      const total = api.extractTotalPages(data);
+      ui.renderPagination('search-pages', page, total,
+        (p) => searchController.run(p));
     } catch (e) {
       ui.error('grid-search', `Pencarian gagal: ${e.message}`);
     }
@@ -107,8 +110,9 @@ const detailController = {
 
     try {
       const data  = await api.getDetail(slug);
-      const comic = data?.data ?? data?.comic ?? data;
-      const chaps = comic.chapters || comic.chapter_list || [];
+      // Komikindo response: { comic: {..., chapters: [...] } }
+      const comic = data?.comic ?? data?.data ?? data;
+      const chaps = comic?.chapters || [];
       this.chapters = chaps;
 
       ui.el('detail-content').innerHTML = ui.renderDetail(
@@ -141,6 +145,7 @@ const readerController = {
 
     try {
       const data   = await api.getChapter(chapSlug);
+      // Komikindo: { images: [...], navigation: { prev, next } }
       const images = data?.images ?? data?.data ?? data?.pages ?? (Array.isArray(data) ? data : []);
       this._navigation = data?.navigation || null;
       ui.renderReader('reader-images', images);
@@ -151,23 +156,21 @@ const readerController = {
   },
 
   navigate(dir) {
-    // Coba pakai navigation dari API dulu
     if (this._navigation) {
-      const target = dir === 1 ? this._navigation.nextChapter : this._navigation.previousChapter;
+      const target = dir === 1 ? this._navigation.next : this._navigation.prev;
       if (target) {
         const chapters = detailController.chapters;
-        const newIdx = chapters.findIndex(ch => (ch.slug || ch.id) === target);
+        const newIdx = chapters.findIndex(ch => ch.slug === target);
         window.scrollTo(0, 0);
         this.open(target, newIdx !== -1 ? newIdx : this.currentIndex);
         return;
       }
     }
-    // Fallback: pakai index (list newest-first → next = index--, prev = index++)
+    // Fallback index-based (list newest-first)
     const newIdx = this.currentIndex - dir;
     const chapters = detailController.chapters;
     if (newIdx < 0 || newIdx >= chapters.length) return;
-    const ch   = chapters[newIdx];
-    const slug = ch.slug || ch.chapter_id || ch.id || '';
+    const slug = chapters[newIdx]?.slug || '';
     window.scrollTo(0, 0);
     this.open(slug, newIdx);
   },

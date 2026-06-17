@@ -25,7 +25,7 @@ const ui = {
     const title = comic.title || comic.judul || comic.name || 'Tanpa Judul';
     const thumb = comic.thumbnail || comic.cover || comic.image || '';
     const type  = comic.type || comic.tipe || '';
-    const chap  = comic.latest_chapter || comic.chapter || comic.latestChapter || '';
+    const latestChap = comic.chapters?.[0]; const chap  = latestChap?.title || comic.latest_chapter || comic.chapter || '';
     // Komikindo pakai field 'slug' langsung
     const slug  = comic.slug || comic.komik_id || comic.id || '';
 

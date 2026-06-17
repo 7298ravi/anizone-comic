@@ -13,16 +13,29 @@ const api = {
     return res.json();
   },
 
+  // Ekstrak list komik dari berbagai bentuk response Komikindo
   extractList(data) {
-    return data?.data ?? data?.komik ?? data?.comics ?? data?.results ?? (Array.isArray(data) ? data : []);
+    return data?.komiklist        // /latest, /library
+        ?? data?.results          // /search
+        ?? data?.data
+        ?? data?.komik
+        ?? data?.comics
+        ?? (Array.isArray(data) ? data : []);
   },
 
-  // GET /comic/komikindo/latest/:page
+  // Ekstrak total halaman dari pagination object
+  extractTotalPages(data) {
+    return data?.pagination?.totalPages
+        ?? data?.pagination?.total_pages
+        ?? data?.total_pages
+        ?? data?.totalPages
+        ?? 1;
+  },
+
   getLatest(page = 1) {
     return this.fetch(`/comic/komikindo/latest/${page}`);
   },
 
-  // GET /comic/komikindo/library (support filter genre, type, search via query string)
   getLibrary({ genre = '', type = '', search = '', page = 1 } = {}) {
     const params = new URLSearchParams();
     if (genre)  params.set('genre', genre);
@@ -33,22 +46,18 @@ const api = {
     return this.fetch(`/comic/komikindo/library${qs ? '?' + qs : ''}`);
   },
 
-  // GET /comic/komikindo/genres
   getGenres() {
     return this.fetch('/comic/komikindo/genres');
   },
 
-  // GET /comic/komikindo/search/:query/:page
   search(query, page = 1) {
     return this.fetch(`/comic/komikindo/search/${encodeURIComponent(query)}/${page}`);
   },
 
-  // GET /comic/komikindo/detail/:slug
   getDetail(slug) {
     return this.fetch(`/comic/komikindo/detail/${slug}`);
   },
 
-  // GET /comic/komikindo/chapter/:slug
   getChapter(slug) {
     return this.fetch(`/comic/komikindo/chapter/${slug}`);
   },

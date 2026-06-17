@@ -15,17 +15,18 @@ const homeController = {
       const data   = await api.getLatest(page);
       const comics = api.extractList(data);
       ui.renderGrid('grid-latest', comics);
-      const total = api.extractTotalPages(data);
-      ui.renderPagination('home-pages', page, total, p => homeController.loadLatest(p));
+      // bacakomik/latest tidak ada pagination, sembunyikan
+      ui.el('home-pages').innerHTML = '';
     } catch (e) {
       ui.error('grid-latest', `Gagal memuat: ${e.message}`);
     }
   },
 };
 
-/* ---- LIBRARY ---- */
+/* ---- LIBRARY / BROWSE ---- */
 const browseController = {
   type: '',
+  genre: '',
   page: 1,
 
   async load() {
@@ -36,24 +37,20 @@ const browseController = {
   setType(type, btnEl) {
     document.querySelectorAll('#type-filter .filter-chip').forEach(b => b.classList.remove('active'));
     btnEl.classList.add('active');
-    this.type = type;
-    this.page = 1;
+    this.type  = type;
+    this.genre = '';
+    this.page  = 1;
     this.fetchData();
   },
 
   async fetchData() {
     ui.loading('grid-browse');
     try {
-      // Kirim type persis seperti yang API harapkan (Manga/Manhwa/Manhua atau lowercase)
-      const data   = await api.getLibrary({ type: this.type, page: this.page });
+      const data   = await api.getLibrary({ type: this.type, genre: this.genre, page: this.page });
       const comics = api.extractList(data);
       ui.renderGrid('grid-browse', comics);
-      const total = api.extractTotalPages(data);
-      const page  = this.page;
-      ui.renderPagination('browse-pages', page, total, p => {
-        browseController.page = p;
-        browseController.fetchData();
-      });
+      // BacaKomik tidak ada totalPages yang reliable, sembunyikan pagination
+      ui.el('browse-pages').innerHTML = '';
     } catch (e) {
       ui.error('grid-browse', `Gagal memuat library: ${e.message}`);
     }
@@ -72,7 +69,7 @@ const searchController = {
       const data   = await api.search(query, page);
       const comics = api.extractList(data);
       ui.renderGrid('grid-search', comics);
-      const total = api.extractTotalPages(data);
+      const total = api.extractTotalPages(data, page);
       ui.renderPagination('search-pages', page, total, p => {
         document.getElementById('search-input').value = query;
         searchController.run(p);
@@ -97,22 +94,25 @@ const detailController = {
       '<div class="loading"><div class="spinner"></div>Memuat detail...</div>';
     try {
       const res = await api.getDetail(slug);
-      // Struktur dari screenshot: { data: { title, image, rating, detail:{status,author,type}, genres[], description, chapters[] } }
-      const comic  = res?.data ?? res;
-      const detail = comic?.detail ?? {};  // { status, author, illustrator, type, theme }
-      const chaps  = comic?.chapters ?? [];
+
+      // Response BacaKomik: { detail: { title, cover, rating, status, type, author, artist,
+      //                                  synopsis, genres:[{title,slug}],
+      //                                  chapterList:[{title,slug,date}] } }
+      const comic = res?.detail ?? res;
+
+      const chaps = comic?.chapterList ?? comic?.chapters ?? [];
       this.chapters = chaps;
 
-      // Gabungkan field detail ke comic supaya renderDetail bisa baca
       const merged = {
-        title:       comic.title,
-        image:       comic.image,
-        type:        detail.type  || comic.type  || '',
-        status:      detail.status || comic.status || '',
-        author:      detail.author || '',
-        synopsis:    comic.description || comic.synopsis || '',
-        genres:      comic.genres ?? [],
-        rating:      comic.rating ?? '',
+        title:    comic.title    || 'Tanpa Judul',
+        image:    comic.cover    || comic.image || '',
+        type:     comic.type     || '',
+        status:   comic.status   || '',
+        author:   comic.author   || '',
+        artist:   comic.artist   || '',
+        synopsis: comic.synopsis || comic.description || '',
+        genres:   comic.genres   ?? [],
+        rating:   comic.rating   ?? '',
       };
 
       ui.el('detail-content').innerHTML = ui.renderDetail(
@@ -131,22 +131,22 @@ const readerController = {
 
   async open(chapSlug, index) {
     if (!chapSlug) return;
-    this.currentIndex = index;
+    this.currentIndex = index ?? 0;
     this._navigation  = null;
     router.go('reader');
     ui.el('reader-images').innerHTML =
       '<div class="loading"><div class="spinner"></div>Memuat chapter...</div>';
     this.updateNav();
 
-    const chap = detailController.chapters[index];
-    ui.el('reader-title').textContent = chap?.title || chap?.name || `Chapter ${index + 1}`;
+    const chap = detailController.chapters[this.currentIndex];
+    ui.el('reader-title').textContent = chap?.title || chap?.name || `Chapter ${this.currentIndex + 1}`;
 
     try {
-      const res  = await api.getChapter(chapSlug);
-      // Struktur dari screenshot: { data: { navigation:{prev,next}, images:[{id,url}] } }
-      const data = res?.data ?? res;
-      this._navigation = data?.navigation ?? null;
-      const images = data?.images ?? data?.pages ?? (Array.isArray(data) ? data : []);
+      const res = await api.getChapter(chapSlug);
+
+      // Response BacaKomik: { title, images:[ urlString, ... ], navigation:{ next, prev } }
+      this._navigation = res?.navigation ?? null;
+      const images = res?.images ?? res?.pages ?? (Array.isArray(res) ? res : []);
       this.updateNav();
       ui.renderReader('reader-images', images);
     } catch (e) {
@@ -155,7 +155,6 @@ const readerController = {
   },
 
   navigate(dir) {
-    // navigation.prev / navigation.next adalah slug chapter langsung
     if (this._navigation) {
       const target = dir === -1 ? this._navigation.prev : this._navigation.next;
       if (target) {
@@ -166,8 +165,9 @@ const readerController = {
         return;
       }
     }
-    // Fallback index (list newest-first: prev=index+1, next=index-1)
-    const newIdx = dir === -1 ? this.currentIndex + 1 : this.currentIndex - 1;
+    // Fallback: chapterList urutan terbaru dulu (index 0 = terbaru)
+    // next (lebih baru) = index-1, prev (lebih lama) = index+1
+    const newIdx   = dir === 1 ? this.currentIndex - 1 : this.currentIndex + 1;
     const chapters = detailController.chapters;
     if (newIdx < 0 || newIdx >= chapters.length) return;
     window.scrollTo(0, 0);
@@ -176,13 +176,13 @@ const readerController = {
 
   updateNav() {
     const total = detailController.chapters.length;
-    // btn-prev-chap = chapter lebih lama (index+1), btn-next-chap = chapter lebih baru (index-1)
-    ui.el('btn-prev-chap').disabled = !this._navigation
-      ? this.currentIndex >= total - 1
-      : !this._navigation.prev;
-    ui.el('btn-next-chap').disabled = !this._navigation
-      ? this.currentIndex <= 0
-      : !this._navigation.next;
+    if (this._navigation) {
+      ui.el('btn-prev-chap').disabled = !this._navigation.prev;
+      ui.el('btn-next-chap').disabled = !this._navigation.next;
+    } else {
+      ui.el('btn-prev-chap').disabled = this.currentIndex >= total - 1;
+      ui.el('btn-next-chap').disabled = this.currentIndex <= 0;
+    }
   },
 
   backToDetail() {

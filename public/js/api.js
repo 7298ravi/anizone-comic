@@ -1,10 +1,11 @@
 /* =============================================
    API.JS — Centralized API Layer
-   Base URL: https://www.sankavollerei.web.id
-   Source: bacakomik endpoints
+   Proxy via Vercel rewrites → sankavollerei.web.id
    ============================================= */
 
-const API_BASE = 'https://www.sankavollerei.web.id';
+// Gunakan path relatif /api/comic/... agar di-proxy oleh Vercel
+// sehingga tidak kena CORS block di browser
+const API_BASE = '/api/comic';
 
 const api = {
   async fetch(path) {
@@ -19,7 +20,6 @@ const api = {
   },
 
   // BacaKomik pakai hasNextPage (boolean), bukan totalPages
-  // Pagination manual: kalau ada hasNextPage, anggap ada halaman berikutnya
   extractTotalPages(data, currentPage = 1) {
     if (data?.totalPages) return data.totalPages;
     if (data?.total_pages) return data.total_pages;
@@ -30,44 +30,39 @@ const api = {
   },
 
   // GET /comic/bacakomik/latest
-  getLatest(page = 1) {
-    // latest tidak pakai page param berdasarkan endpoint docs
-    return this.fetch(`/comic/bacakomik/latest`);
+  getLatest() {
+    return this.fetch('/bacakomik/latest');
   },
 
   // GET /comic/bacakomik/only/:type  (manga | manhwa | manhua)
-  // GET /comic/bacakomik/list        (semua)
-  getLibrary({ type = '', genre = '', page = 1 } = {}) {
+  // GET /comic/bacakomik/populer     (semua)
+  getLibrary({ type = '', genre = '' } = {}) {
     if (genre) {
-      return this.fetch(`/comic/bacakomik/genre/${encodeURIComponent(genre)}`);
+      return this.fetch(`/bacakomik/genre/${encodeURIComponent(genre)}`);
     }
     if (type) {
-      return this.fetch(`/comic/bacakomik/only/${encodeURIComponent(type)}`);
+      return this.fetch(`/bacakomik/only/${encodeURIComponent(type)}`);
     }
-    return this.fetch(`/comic/bacakomik/populer`);
+    return this.fetch('/bacakomik/populer');
   },
 
   // GET /comic/bacakomik/genres
   getGenres() {
-    return this.fetch('/comic/bacakomik/genres');
+    return this.fetch('/bacakomik/genres');
   },
 
   // GET /comic/bacakomik/search/:query
-  search(query, page = 1) {
-    return this.fetch(`/comic/bacakomik/search/${encodeURIComponent(query)}`);
+  search(query) {
+    return this.fetch(`/bacakomik/search/${encodeURIComponent(query)}`);
   },
 
   // GET /comic/bacakomik/detail/:slug
-  // Response: { detail: { title, cover, rating, otherTitle, status, type, author, artist,
-  //                        release, series, reader, synopsis, genres:[{title,slug}],
-  //                        chapterList:[{title,slug,date}] } }
   getDetail(slug) {
-    return this.fetch(`/comic/bacakomik/detail/${slug}`);
+    return this.fetch(`/bacakomik/detail/${slug}`);
   },
 
   // GET /comic/bacakomik/chapter/:slug
-  // Response: { title, images:[ urlString, ... ], navigation:{ next, prev } }
   getChapter(slug) {
-    return this.fetch(`/comic/bacakomik/chapter/${slug}`);
+    return this.fetch(`/bacakomik/chapter/${slug}`);
   },
 };

@@ -2,11 +2,27 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/((?!public/).*)",
+      "source": "/api/comic/:path*",
+      "destination": "https://www.sankavollerei.web.id/comic/:path*"
+    },
+    {
+      "source": "/((?!api/).*\\..+)",
+      "destination": "/$1"
+    },
+    {
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

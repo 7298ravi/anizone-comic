@@ -36,7 +36,7 @@ const api = {
   },
 
   getGenres() {
-    return this.fetch('/bacakomik/genres');
+    return this.fetch('/komikindo/genres');
   },
 
   search(query) {

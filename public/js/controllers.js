@@ -1,21 +1,77 @@
 /* =============================================
    CONTROLLERS.JS — Feature Controllers
+   Enhanced with: live search, history,
+   fullscreen reader, read tracking, theme toggle
    ============================================= */
 
-/* ---- HOME ---- */
+/* ============================================
+   THEME MANAGER
+   ============================================ */
+const themeManager = {
+  init() {
+    const saved = storage.getTheme();
+    this.apply(saved);
+  },
+
+  apply(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    storage.setTheme(theme);
+    const iconSun  = document.getElementById('icon-sun');
+    const iconMoon = document.getElementById('icon-moon');
+    if (iconSun)  iconSun.style.display  = theme === 'dark'  ? 'none' : 'block';
+    if (iconMoon) iconMoon.style.display = theme === 'light' ? 'none' : 'block';
+  },
+
+  toggle() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next    = current === 'dark' ? 'light' : 'dark';
+    this.apply(next);
+    ui.toast(next === 'dark' ? '🌙 Mode Gelap' : '☀️ Mode Terang');
+  },
+};
+
+/* ============================================
+   MOBILE MENU
+   ============================================ */
+const mobileMenu = {
+  toggle() {
+    const drawer = document.getElementById('mobile-drawer');
+    if (!drawer) return;
+    const isOpen = drawer.style.display !== 'none';
+    drawer.style.display = isOpen ? 'none' : 'flex';
+  },
+  close() {
+    const drawer = document.getElementById('mobile-drawer');
+    if (drawer) drawer.style.display = 'none';
+  },
+};
+
+// Close mobile drawer when clicking outside
+document.addEventListener('click', (e) => {
+  const drawer = document.getElementById('mobile-drawer');
+  const menuBtn = document.querySelector('.mobile-menu-btn');
+  if (drawer && drawer.style.display !== 'none') {
+    if (!drawer.contains(e.target) && !menuBtn?.contains(e.target)) {
+      drawer.style.display = 'none';
+    }
+  }
+});
+
+/* ============================================
+   HOME CONTROLLER
+   ============================================ */
 const homeController = {
   async load() {
     router.go('home');
-    this.loadLatest(1);
+    this.loadLatest();
   },
 
-  async loadLatest(page = 1) {
-    ui.loading('grid-latest');
+  async loadLatest() {
+    ui.skeleton('grid-latest', 12);
     try {
-      const data   = await api.getLatest(page);
+      const data   = await api.getLatest();
       const comics = api.extractList(data);
-      ui.renderGrid('grid-latest', comics);
-      // bacakomik/latest tidak ada pagination, sembunyikan
+      ui.renderGrid('grid-latest', comics, { markNew: true });
       ui.el('home-pages').innerHTML = '';
     } catch (e) {
       ui.error('grid-latest', `Gagal memuat: ${e.message}`);
@@ -23,11 +79,14 @@ const homeController = {
   },
 };
 
-/* ---- LIBRARY / BROWSE ---- */
+/* ============================================
+   BROWSE / LIBRARY CONTROLLER
+   ============================================ */
 const browseController = {
-  type: '',
+  type:  '',
   genre: '',
-  page: 1,
+  page:  1,
+  _genreLabel: '',
 
   async load() {
     router.go('browse');
@@ -43,13 +102,28 @@ const browseController = {
     this.fetchData();
   },
 
+  filterGenre(slug, label) {
+    this.genre      = slug;
+    this._genreLabel = label;
+    this.type       = '';
+    this.page       = 1;
+
+    // Reset type chips
+    document.querySelectorAll('#type-filter .filter-chip').forEach((b, i) => {
+      b.classList.toggle('active', i === 0);
+    });
+
+    router.go('browse');
+    this.fetchData();
+    if (label) ui.toast(`📚 Genre: ${label}`);
+  },
+
   async fetchData() {
-    ui.loading('grid-browse');
+    ui.skeleton('grid-browse', 12);
     try {
-      const data   = await api.getLibrary({ type: this.type, genre: this.genre, page: this.page });
+      const data   = await api.getLibrary({ type: this.type, genre: this.genre });
       const comics = api.extractList(data);
       ui.renderGrid('grid-browse', comics);
-      // BacaKomik tidak ada totalPages yang reliable, sembunyikan pagination
       ui.el('browse-pages').innerHTML = '';
     } catch (e) {
       ui.error('grid-browse', `Gagal memuat library: ${e.message}`);
@@ -57,53 +131,166 @@ const browseController = {
   },
 };
 
-/* ---- SEARCH ---- */
+/* ============================================
+   SEARCH CONTROLLER — with live search
+   ============================================ */
 const searchController = {
-  async run(page = 1) {
-    const query = document.getElementById('search-input').value.trim();
+  _liveTimer: null,
+  _heroTimer: null,
+
+  // ---- Navbar search ----
+  run() {
+    const query = document.getElementById('search-input')?.value.trim();
     if (!query) return;
-    router.go('search');
-    document.getElementById('search-heading').textContent = `Hasil: "${query}"`;
-    ui.loading('grid-search');
+    this.closeDropdown();
+    this._doSearch(query, 'grid-search', 'search-pages', 'search-heading', 'search');
+  },
+
+  async _doSearch(query, gridId, pagesId, headingId, view) {
+    router.go(view);
+    if (headingId) {
+      const h = document.getElementById(headingId);
+      if (h) h.textContent = `Hasil: "${query}"`;
+    }
+    ui.skeleton(gridId, 8);
     try {
-      const data   = await api.search(query, page);
+      const data   = await api.search(query);
       const comics = api.extractList(data);
-      ui.renderGrid('grid-search', comics);
-      const total = api.extractTotalPages(data, page);
-      ui.renderPagination('search-pages', page, total, p => {
-        document.getElementById('search-input').value = query;
-        searchController.run(p);
+      ui.renderGrid(gridId, comics);
+      const total = api.extractTotalPages(data, 1);
+      ui.renderPagination(pagesId, 1, total, p => {
+        if (gridId === 'grid-search') document.getElementById('search-input').value = query;
+        this._doSearch(query, gridId, pagesId, headingId, view);
       });
     } catch (e) {
-      ui.error('grid-search', `Pencarian gagal: ${e.message}`);
+      ui.error(gridId, `Pencarian gagal: ${e.message}`);
     }
+  },
+
+  clear() {
+    const input = document.getElementById('search-input');
+    const clearBtn = document.getElementById('search-clear');
+    if (input) input.value = '';
+    if (clearBtn) clearBtn.style.display = 'none';
+    this.closeDropdown();
+  },
+
+  // ---- Live search (navbar) ----
+  liveSearch() {
+    const input    = document.getElementById('search-input');
+    const dropdown = document.getElementById('search-dropdown');
+    const clearBtn = document.getElementById('search-clear');
+    const query    = input?.value.trim();
+
+    if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
+    if (!query || query.length < 2) {
+      this.closeDropdown();
+      return;
+    }
+
+    if (dropdown) dropdown.style.display = 'block';
+    if (dropdown) dropdown.innerHTML = '<div class="dropdown-loading"><div class="spinner" style="width:22px;height:22px;margin:0 auto"></div></div>';
+
+    clearTimeout(this._liveTimer);
+    this._liveTimer = setTimeout(async () => {
+      try {
+        const data   = await api.search(query);
+        const comics = api.extractList(data);
+        if (document.getElementById('search-input')?.value.trim() !== query) return; // stale
+        ui.renderDropdown('search-dropdown', comics, (slug) => {
+          this.closeDropdown();
+          detailController.open(slug);
+        });
+      } catch {
+        if (dropdown) dropdown.innerHTML = '<div class="dropdown-empty">Gagal mencari</div>';
+      }
+    }, 380);
+  },
+
+  closeDropdown() {
+    const d = document.getElementById('search-dropdown');
+    if (d) d.style.display = 'none';
+  },
+
+  // ---- Hero search ----
+  runHero() {
+    const query = document.getElementById('hero-input')?.value.trim();
+    if (!query) return;
+    document.getElementById('hero-dropdown').style.display = 'none';
+    // Sinkron ke navbar input juga
+    const navInput = document.getElementById('search-input');
+    if (navInput) navInput.value = query;
+    this._doSearch(query, 'grid-search', 'search-pages', 'search-heading', 'search');
+  },
+
+  liveSearchHero() {
+    const input    = document.getElementById('hero-input');
+    const dropdown = document.getElementById('hero-dropdown');
+    const query    = input?.value.trim();
+
+    if (!query || query.length < 2) {
+      if (dropdown) dropdown.style.display = 'none';
+      return;
+    }
+
+    if (dropdown) { dropdown.style.display = 'block'; dropdown.innerHTML = '<div class="dropdown-loading">Mencari...</div>'; }
+
+    clearTimeout(this._heroTimer);
+    this._heroTimer = setTimeout(async () => {
+      try {
+        const data   = await api.search(query);
+        const comics = api.extractList(data);
+        if (document.getElementById('hero-input')?.value.trim() !== query) return;
+        ui.renderDropdown('hero-dropdown', comics, (slug) => {
+          if (dropdown) dropdown.style.display = 'none';
+          detailController.open(slug);
+        });
+      } catch {
+        if (dropdown) dropdown.innerHTML = '<div class="dropdown-empty">Gagal mencari</div>';
+      }
+    }, 380);
   },
 };
 
-/* ---- DETAIL ---- */
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('search-wrapper')?.contains(e.target)) {
+    searchController.closeDropdown();
+  }
+  if (!document.querySelector('.hero-search-bar')?.contains(e.target) &&
+      !document.getElementById('hero-dropdown')?.contains(e.target)) {
+    const hd = document.getElementById('hero-dropdown');
+    if (hd) hd.style.display = 'none';
+  }
+});
+
+/* ============================================
+   DETAIL CONTROLLER
+   ============================================ */
 const detailController = {
   currentSlug: null,
+  currentComic: null,
   chapters: [],
 
   async open(slug) {
     if (!slug) return;
-    this.currentSlug = slug;
-    this.chapters    = [];
+    this.currentSlug  = slug;
+    this.currentComic = null;
+    this.chapters     = [];
     router.go('detail');
     ui.el('detail-content').innerHTML =
       '<div class="loading"><div class="spinner"></div>Memuat detail...</div>';
-    try {
-      const res = await api.getDetail(slug);
 
-      // Response BacaKomik: { detail: { title, cover, rating, status, type, author, artist,
-      //                                  synopsis, genres:[{title,slug}],
-      //                                  chapterList:[{title,slug,date}] } }
+    try {
+      const res   = await api.getDetail(slug);
       const comic = res?.detail ?? res;
 
       const chaps = comic?.chapters ?? comic?.chapterList ?? [];
       this.chapters = chaps;
 
       const merged = {
+        slug:     slug,
         title:    comic.title    || 'Tanpa Judul',
         image:    comic.cover    || comic.image || '',
         type:     comic.type     || '',
@@ -114,9 +301,11 @@ const detailController = {
         genres:   comic.genres   ?? [],
         rating:   comic.rating   ?? '',
       };
+      this.currentComic = merged;
 
       ui.el('detail-content').innerHTML = ui.renderDetail(
-        merged, chaps, (chapSlug, idx) => readerController.open(chapSlug, idx)
+        merged, chaps,
+        (chapSlug, idx) => readerController.open(chapSlug, idx)
       );
     } catch (e) {
       ui.el('detail-content').innerHTML = `<div class="error-msg">Gagal memuat detail: ${e.message}</div>`;
@@ -124,37 +313,86 @@ const detailController = {
   },
 };
 
-/* ---- READER ---- */
+/* ============================================
+   READER CONTROLLER
+   ============================================ */
 const readerController = {
   currentIndex: 0,
-  _navigation: null,
+  _navigation:  null,
+  _chapSlug:    null,
 
   async open(chapSlug, index) {
     if (!chapSlug) return;
+    this._chapSlug    = chapSlug;
     this.currentIndex = index ?? 0;
     this._navigation  = null;
     router.go('reader');
+
     ui.el('reader-images').innerHTML =
       '<div class="loading"><div class="spinner"></div>Memuat chapter...</div>';
-    this.updateNav();
 
     const chap = detailController.chapters[this.currentIndex];
-    ui.el('reader-title').textContent = chap?.title || chap?.name || `Chapter ${this.currentIndex + 1}`;
+    const chapName = chap?.title || chap?.name || `Chapter ${this.currentIndex + 1}`;
+    ui.el('reader-title').textContent = chapName;
+
+    // Populate chapter selector
+    this._buildChapterSelect();
+    this.updateNav();
 
     try {
       const res = await api.getChapter(chapSlug);
-
-      // Response BacaKomik: { title, images:[ urlString, ... ], navigation:{ next, prev } }
       this._navigation = res?.navigation ?? null;
       const images = res?.images ?? res?.pages ?? (Array.isArray(res) ? res : []);
+
       this.updateNav();
       ui.renderReader('reader-images', images);
+
+      // Update chapter select value
+      const sel = document.getElementById('chapter-select');
+      if (sel) sel.value = this.currentIndex;
+
+      // Track reading history
+      const comic = detailController.currentComic;
+      if (comic && detailController.currentSlug) {
+        storage.addHistory({
+          slug:     detailController.currentSlug,
+          title:    comic.title,
+          cover:    comic.image || comic.cover || '',
+          type:     comic.type  || '',
+          chapSlug: chapSlug,
+          chapName: chapName,
+        });
+        storage.markChapterRead(detailController.currentSlug, chapSlug);
+      }
+
+      ui.toast(`📖 ${chapName}`, 'info');
     } catch (e) {
-      ui.el('reader-images').innerHTML = `<div class="error-msg">Gagal memuat chapter: ${e.message}</div>`;
+      ui.el('reader-images').innerHTML =
+        `<div class="error-msg">Gagal memuat chapter: ${e.message}</div>`;
     }
   },
 
+  _buildChapterSelect() {
+    const sel    = document.getElementById('chapter-select');
+    const chaps  = detailController.chapters;
+    if (!sel || !chaps.length) return;
+    sel.innerHTML = chaps.map((ch, i) => {
+      const name = ch.title || ch.name || `Chapter ${i + 1}`;
+      return `<option value="${i}">${name}</option>`;
+    }).join('');
+    sel.value = this.currentIndex;
+  },
+
+  jumpToChapter(indexStr) {
+    const idx  = parseInt(indexStr, 10);
+    const chap = detailController.chapters[idx];
+    if (!chap) return;
+    window.scrollTo(0, 0);
+    this.open(chap.slug, idx);
+  },
+
   navigate(dir) {
+    // dir: -1 = prev (older), 1 = next (newer)
     if (this._navigation) {
       const target = dir === -1 ? this._navigation.prev : this._navigation.next;
       if (target) {
@@ -165,8 +403,7 @@ const readerController = {
         return;
       }
     }
-    // Fallback: chapterList urutan terbaru dulu (index 0 = terbaru)
-    // next (lebih baru) = index-1, prev (lebih lama) = index+1
+    // Fallback (newest = index 0, oldest = last index)
     const newIdx   = dir === 1 ? this.currentIndex - 1 : this.currentIndex + 1;
     const chapters = detailController.chapters;
     if (newIdx < 0 || newIdx >= chapters.length) return;
@@ -176,17 +413,62 @@ const readerController = {
 
   updateNav() {
     const total = detailController.chapters.length;
+
+    const setDisabled = (id, val) => {
+      const el = ui.el(id);
+      if (el) el.disabled = val;
+    };
+
     if (this._navigation) {
-      ui.el('btn-prev-chap').disabled = !this._navigation.prev;
-      ui.el('btn-next-chap').disabled = !this._navigation.next;
+      const noPrev = !this._navigation.prev;
+      const noNext = !this._navigation.next;
+      setDisabled('btn-prev-chap',   noPrev);
+      setDisabled('btn-next-chap',   noNext);
+      setDisabled('btn-prev-bottom', noPrev);
+      setDisabled('btn-next-bottom', noNext);
     } else {
-      ui.el('btn-prev-chap').disabled = this.currentIndex >= total - 1;
-      ui.el('btn-next-chap').disabled = this.currentIndex <= 0;
+      const atOldest = this.currentIndex >= total - 1;
+      const atNewest = this.currentIndex <= 0;
+      setDisabled('btn-prev-chap',   atOldest);
+      setDisabled('btn-next-chap',   atNewest);
+      setDisabled('btn-prev-bottom', atOldest);
+      setDisabled('btn-next-bottom', atNewest);
+    }
+  },
+
+  toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
     }
   },
 
   backToDetail() {
     if (detailController.currentSlug) router.go('detail', false);
     else router.back();
+  },
+};
+
+/* ============================================
+   HISTORY CONTROLLER
+   ============================================ */
+const historyController = {
+  load() {
+    router.go('history');
+    const list = storage.getHistory();
+
+    // Show/hide clear button
+    const clearBtn = document.getElementById('clear-history-btn');
+    if (clearBtn) clearBtn.style.display = list.length ? 'flex' : 'none';
+
+    ui.renderHistory('history-content', list);
+  },
+
+  clearAll() {
+    if (!confirm('Hapus semua riwayat bacaan?')) return;
+    storage.clearHistory();
+    ui.toast('🗑️ Riwayat dihapus', 'info');
+    this.load();
   },
 };

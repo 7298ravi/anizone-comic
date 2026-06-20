@@ -1,41 +1,63 @@
 /* =============================================
    BASE.CSS — Variables, Reset, Typography
+   Light / Dark theme support
    ============================================= */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
 
-:root {
-  /* Colors */
-  --bg:          #0d0d14;
-  --surface:     #16161f;
-  --surface2:    #1e1e2a;
-  --border:      #2a2a3a;
-  --accent:      #7c5cfc;
-  --accent2:     #e056a0;
-  --text:        #e8e8f0;
-  --muted:       #7878a0;
-  --card-hover:  #222230;
+/* ---- DARK THEME (default) ---- */
+:root, [data-theme="dark"] {
+  --bg:         #0a0a0f;
+  --bg2:        #0d0d16;
+  --surface:    #12121c;
+  --surface2:   #1a1a28;
+  --surface3:   #222234;
+  --border:     #2a2a3e;
+  --accent:     #7c5cfc;
+  --accent2:    #e056a0;
+  --accent-rgb: 124,92,252;
+  --text:       #e8e8f4;
+  --text2:      #b0b0cc;
+  --muted:      #6a6a90;
+  --card-hover: #1e1e2e;
+  --danger:     #e05050;
+  --success:    #50c870;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lg:  0 8px 40px rgba(0,0,0,0.6);
 
-  /* Typography */
   --font-body:    'Inter', sans-serif;
   --font-display: 'Space Grotesk', sans-serif;
-
-  /* Spacing */
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 14px;
-
-  /* Layout */
-  --nav-height: 56px;
-  --max-width:  1200px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --nav-height: 60px;
+  --max-width: 1200px;
 }
 
-/* Reset */
-*, *::before, *::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ---- LIGHT THEME ---- */
+[data-theme="light"] {
+  --bg:         #f4f4fa;
+  --bg2:        #eeeef8;
+  --surface:    #ffffff;
+  --surface2:   #f0f0fc;
+  --surface3:   #e8e8f8;
+  --border:     #d0d0e8;
+  --accent:     #6042e8;
+  --accent2:    #c03880;
+  --accent-rgb: 96,66,232;
+  --text:       #1a1a2e;
+  --text2:      #4a4a6a;
+  --muted:      #8080a8;
+  --card-hover: #eaeaf8;
+  --danger:     #d03030;
+  --success:    #208840;
+  --shadow:     0 4px 24px rgba(100,80,200,0.08);
+  --shadow-lg:  0 8px 40px rgba(100,80,200,0.15);
 }
+
+/* ---- RESET ---- */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
 html { scroll-behavior: smooth; }
 
@@ -44,23 +66,13 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   min-height: 100vh;
-  line-height: 1.5;
+  line-height: 1.6;
+  transition: background 0.3s, color 0.3s;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button {
-  font-family: var(--font-body);
-  cursor: pointer;
-}
-
-img {
-  display: block;
-  max-width: 100%;
-}
+a { color: inherit; text-decoration: none; }
+button { font-family: var(--font-body); cursor: pointer; }
+img { display: block; max-width: 100%; }
 
 /* Scrollbar */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
@@ -78,6 +90,17 @@ main {
 .view { animation: fadeIn 0.2s ease; }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity:0; transform: translateY(8px); }
+  to   { opacity:1; transform: translateY(0); }
 }
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Full width utility for mobile nav */
+.w-full { width: 100%; }

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AniZone - Baca Manga</title>
-  <meta name="description" content="Baca manga, manhwa, dan manhua gratis di AniZone">
+  <title>AniZone Comic — Baca Manga, Manhwa, Manhua</title>
+  <meta name="description" content="Baca manga, manhwa, dan manhua gratis di AniZone. Update setiap hari!">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
@@ -17,23 +17,89 @@
   <!-- SCROLL PROGRESS BAR -->
   <div id="reader-progress-bar"></div>
 
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast" aria-live="polite"></div>
+
   <!-- NAVBAR -->
   <nav id="navbar">
-    <div class="logo" onclick="homeController.load()">AniZone</div>
-    <div class="nav-links">
-      <button class="nav-btn" id="nav-home"    onclick="homeController.load()">Home</button>
-      <button class="nav-btn" id="nav-browse"  onclick="browseController.load()">Library</button>
+    <div class="nav-left">
+      <div class="logo" onclick="homeController.load()">
+        <span class="logo-icon">⚡</span>AniZone
+      </div>
+      <div class="nav-links">
+        <button class="nav-btn" id="nav-home"    onclick="homeController.load()">Home</button>
+        <button class="nav-btn" id="nav-browse"  onclick="browseController.load()">Library</button>
+        <button class="nav-btn" id="nav-history" onclick="historyController.load()">Riwayat</button>
+      </div>
     </div>
-    <div class="search-bar">
-      <input type="text" id="search-input" placeholder="Cari manga..."
-             onkeydown="if(event.key==='Enter') searchController.run()">
-      <button onclick="searchController.run()">🔍</button>
+
+    <div class="nav-right">
+      <!-- LIVE SEARCH -->
+      <div class="search-wrapper" id="search-wrapper">
+        <div class="search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" id="search-input" placeholder="Cari komik..." autocomplete="off"
+                 oninput="searchController.liveSearch()"
+                 onkeydown="if(event.key==='Enter') searchController.run(); if(event.key==='Escape') searchController.closeDropdown()">
+          <button class="search-clear" id="search-clear" onclick="searchController.clear()" title="Hapus" style="display:none">✕</button>
+        </div>
+        <!-- LIVE SEARCH DROPDOWN -->
+        <div class="search-dropdown" id="search-dropdown" style="display:none"></div>
+      </div>
+
+      <!-- THEME TOGGLE -->
+      <button class="icon-btn" id="theme-btn" onclick="themeManager.toggle()" title="Ganti tema" aria-label="Toggle theme">
+        <svg id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+
+      <!-- MOBILE MENU -->
+      <button class="icon-btn mobile-menu-btn" onclick="mobileMenu.toggle()" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
     </div>
   </nav>
+
+  <!-- MOBILE NAV DRAWER -->
+  <div class="mobile-drawer" id="mobile-drawer" style="display:none">
+    <button class="nav-btn w-full" onclick="homeController.load();mobileMenu.close()">🏠 Home</button>
+    <button class="nav-btn w-full" onclick="browseController.load();mobileMenu.close()">📚 Library</button>
+    <button class="nav-btn w-full" onclick="historyController.load();mobileMenu.close()">🕐 Riwayat</button>
+  </div>
 
   <main>
     <!-- HOME -->
     <div id="view-home" class="view">
+      <!-- HERO SEARCH (desktop full) -->
+      <div class="hero-section">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+          <h1 class="hero-title">
+            <span class="gradient-text">AniZone</span> Comic
+          </h1>
+          <p class="hero-sub">Baca manga, manhwa & manhua gratis. Update setiap hari!</p>
+          <div class="hero-search-bar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input type="text" id="hero-input" placeholder="Cari judul komik..." autocomplete="off"
+                   oninput="searchController.liveSearchHero()"
+                   onkeydown="if(event.key==='Enter') searchController.runHero()">
+            <button onclick="searchController.runHero()">Cari</button>
+          </div>
+          <div class="hero-search-dropdown" id="hero-dropdown" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- LATEST -->
       <div class="section-header">
         <div class="section-title">🕐 Komik Terbaru</div>
       </div>
@@ -56,7 +122,7 @@
       <div class="pagination" id="browse-pages"></div>
     </div>
 
-    <!-- SEARCH -->
+    <!-- SEARCH RESULTS -->
     <div id="view-search" class="view" style="display:none">
       <button class="back-btn" onclick="router.back()">← Kembali</button>
       <div class="section-header">
@@ -64,6 +130,17 @@
       </div>
       <div class="comic-grid" id="grid-search"></div>
       <div class="pagination" id="search-pages"></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="view-history" class="view" style="display:none">
+      <div class="section-header">
+        <div class="section-title">🕐 Riwayat Bacaan</div>
+        <button class="danger-btn" id="clear-history-btn" onclick="historyController.clearAll()" style="display:none">
+          🗑️ Hapus Semua
+        </button>
+      </div>
+      <div id="history-content"></div>
     </div>
 
     <!-- DETAIL -->
@@ -74,24 +151,47 @@
 
     <!-- READER -->
     <div id="view-reader" class="view" style="display:none">
-      <div class="reader-nav reader-nav-sticky">
+      <!-- STICKY TOP NAV -->
+      <div class="reader-nav reader-nav-sticky" id="reader-top-nav">
         <button class="back-btn" style="margin:0" onclick="readerController.backToDetail()">← Detail</button>
         <div class="reader-title" id="reader-title"></div>
-        <div style="display:flex;gap:0.4rem">
+        <div class="reader-top-actions">
+          <button class="icon-btn" id="btn-fullscreen" onclick="readerController.toggleFullscreen()" title="Fullscreen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+          </button>
           <button class="reader-nav-btn" id="btn-prev-chap" onclick="readerController.navigate(-1)">← Prev</button>
           <button class="reader-nav-btn" id="btn-next-chap" onclick="readerController.navigate(1)">Next →</button>
         </div>
       </div>
+
+      <!-- CHAPTER SELECTOR -->
+      <div class="reader-chapter-bar">
+        <select id="chapter-select" onchange="readerController.jumpToChapter(this.value)" class="chapter-select"></select>
+      </div>
+
       <div class="reader-images" id="reader-images"></div>
-      <div class="reader-nav" style="margin-top:1rem">
-        <button class="reader-nav-btn" onclick="readerController.navigate(-1)">← Chapter Sebelumnya</button>
-        <div></div>
-        <button class="reader-nav-btn" onclick="readerController.navigate(1)">Chapter Selanjutnya →</button>
+
+      <!-- BOTTOM NAV -->
+      <div class="reader-bottom-nav">
+        <button class="reader-nav-btn-lg" id="btn-prev-bottom" onclick="readerController.navigate(-1)">← Chapter Sebelumnya</button>
+        <button class="back-to-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Atas</button>
+        <button class="reader-nav-btn-lg" id="btn-next-bottom" onclick="readerController.navigate(1)">Chapter Selanjutnya →</button>
       </div>
     </div>
   </main>
 
+  <!-- FOOTER -->
+  <footer id="main-footer">
+    <div class="footer-inner">
+      <div class="footer-logo">⚡ AniZone</div>
+      <p class="footer-copy">© 2025 AniZone. Platform baca komik online terbaik.</p>
+    </div>
+  </footer>
+
   <script src="/js/api.js"></script>
+  <script src="/js/storage.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/router.js"></script>
   <script src="/js/controllers.js"></script>

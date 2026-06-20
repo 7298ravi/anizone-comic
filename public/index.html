@@ -112,12 +112,36 @@
       <div class="section-header">
         <div class="section-title">📚 Library</div>
       </div>
+
+      <!-- TYPE FILTER -->
       <div class="filter-row" id="type-filter">
         <button class="filter-chip active" onclick="browseController.setType('',this)">Semua</button>
         <button class="filter-chip" onclick="browseController.setType('manga',this)">Manga</button>
         <button class="filter-chip" onclick="browseController.setType('manhwa',this)">Manhwa</button>
         <button class="filter-chip" onclick="browseController.setType('manhua',this)">Manhua</button>
       </div>
+
+      <!-- GENRE PANEL -->
+      <div class="genre-panel" id="genre-panel">
+        <button class="genre-toggle-btn" id="genre-toggle-btn" onclick="browseController.toggleGenrePanel()">
+          <span>🏷️ Filter Genre</span>
+          <svg id="genre-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="genre-chips-wrapper" id="genre-chips-wrapper" style="display:none">
+          <div class="genre-chips" id="genre-chips">
+            <div class="genre-loading">Memuat genre...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVE GENRE INDICATOR -->
+      <div class="active-genre-bar" id="active-genre-bar" style="display:none">
+        <span id="active-genre-label"></span>
+        <button onclick="browseController.clearGenre()">✕ Hapus Filter</button>
+      </div>
+
       <div class="comic-grid" id="grid-browse"></div>
       <div class="pagination" id="browse-pages"></div>
     </div>

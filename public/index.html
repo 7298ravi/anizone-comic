@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AniZone Comic — Baca Manga, Manhwa, Manhua</title>
+  <title>Manga Comic — Baca Manga, Manhwa, Manhua</title>
   <meta name="description" content="Baca manga, manhwa, dan manhua gratis di AniZone. Update setiap hari!">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,7 +24,7 @@
   <nav id="navbar">
     <div class="nav-left">
       <div class="logo" onclick="homeController.load()">
-        <span class="logo-icon">⚡</span>AniZone
+        <span class="logo-icon">⚡</span>Anime Kadokawa 
       </div>
       <div class="nav-links">
         <button class="nav-btn" id="nav-home"    onclick="homeController.load()">Home</button>
@@ -40,7 +40,7 @@
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input type="text" id="search-input" placeholder="Cari komik..." autocomplete="off"
+          <input type="text" id="search-input" placeholder="search manga..." autocomplete="off"
                  oninput="searchController.liveSearch()"
                  onkeydown="if(event.key==='Enter') searchController.run(); if(event.key==='Escape') searchController.closeDropdown()">
           <button class="search-clear" id="search-clear" onclick="searchController.clear()" title="Hapus" style="display:none">✕</button>

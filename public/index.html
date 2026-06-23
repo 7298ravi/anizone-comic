@@ -85,12 +85,12 @@
           <h1 class="hero-title">
             <span class="gradient-text">AniZone</span> Comic
           </h1>
-          <p class="hero-sub">Baca manga, manhwa & manhua gratis. Update setiap hari!</p>
+          <p class="hero-sub">Baca manga, manhwa & manhua gratis. Update Daily</p>
           <div class="hero-search-bar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
-            <input type="text" id="hero-input" placeholder="Cari judul komik..." autocomplete="off"
+            <input type="text" id="hero-input" placeholder="search manga komik manhwa..." autocomplete="off"
                    oninput="searchController.liveSearchHero()"
                    onkeydown="if(event.key==='Enter') searchController.runHero()">
             <button onclick="searchController.runHero()">Cari</button>
@@ -101,7 +101,7 @@
 
       <!-- LATEST -->
       <div class="section-header">
-        <div class="section-title">🕐 Komik Terbaru</div>
+        <div class="section-title">🕐 Ongoing</div>
       </div>
       <div class="comic-grid" id="grid-latest"></div>
       <div class="pagination" id="home-pages"></div>
@@ -177,7 +177,7 @@
     <!-- HISTORY -->
     <div id="view-history" class="view" style="display:none">
       <div class="section-header">
-        <div class="section-title">🕐 Riwayat Bacaan</div>
+        <div class="section-title">🕐 History</div>
         <button class="danger-btn" id="clear-history-btn" onclick="historyController.clearAll()" style="display:none">
           🗑️ Hapus Semua
         </button>
@@ -227,8 +227,8 @@
   <!-- FOOTER -->
   <footer id="main-footer">
     <div class="footer-inner">
-      <div class="footer-logo">⚡ AniZone</div>
-      <p class="footer-copy">© 2025 AniZone. Platform baca komik online terbaik.</p>
+      <div class="footer-logo">⚡ Manga manhwakadokawa</div>
+      <p class="footer-copy">© 2025 Anime kadokawa release by. Platform baca komik online terbaik.</p>
     </div>
   </footer>
 

@@ -1,9 +1,9 @@
 /* =============================================
    API.JS — Centralized API Layer
-   Proxy via Vercel rewrites → sankavollerei.web.id
+   Proxy via Vercel rewrites → anipub.xyz
    ============================================= */
 
-const API_BASE = '/api/comic';
+const API_BASE = '/api/info';
 
 const api = {
   async fetch(path) {
@@ -40,11 +40,11 @@ const api = {
   },
 
   extractUnlimitedList(data) {
-    return data?.comics ?? data?.komikList ?? data?.results ?? (Array.isArray(data) ? data : []);
+    return data?.info ?? data?.animelist ?? data?.results ?? (Array.isArray(data) ? data : []);
   },
 
   getGenres() {
-    return this.fetch('/komikindo/genres');
+    return this.fetch('/api/check');
   },
 
   search(query) {

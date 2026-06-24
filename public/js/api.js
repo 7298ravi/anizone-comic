@@ -3,7 +3,7 @@
    Proxy via Vercel rewrites → sankavollerei.web.id
    ============================================= */
 
-const API_BASE = '/api/id';
+const API_BASE = '/api/comic';
 
 const api = {
   async fetch(path) {

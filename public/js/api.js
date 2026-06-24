@@ -1,61 +1,176 @@
 /* =============================================
-   API.JS — Centralized API Layer
-   Proxy via Vercel rewrites → anipub.xyz
+   ANIME API.JS — AniPub Anime API Layer
    ============================================= */
 
-const API_BASE = '/api/info';
+const API_BASE = 'https://www.anipub.xyz';
 
 const api = {
-  async fetch(path) {
-    const res = await fetch(API_BASE + path);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  async fetch(path, options = {}) {
+    const res = await fetch(API_BASE + path, options);
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
     return res.json();
   },
 
+  /* =========================
+     Helpers
+  ========================= */
+
+  fixImage(url) {
+    if (!url) return '';
+    return url.startsWith('https://')
+      ? url
+      : `${API_BASE}/${url}`;
+  },
+
   extractList(data) {
-    return data?.komikList ?? data?.komiklist ?? data?.results ?? data?.data ?? (Array.isArray(data) ? data : []);
+    return (
+      data?.wholePage ||
+      data?.AniData ||
+      data?.results ||
+      data?.data ||
+      (Array.isArray(data) ? data : [])
+    );
   },
 
-  extractTotalPages(data, currentPage = 1) {
-    if (data?.totalPages) return data.totalPages;
-    if (data?.total_pages) return data.total_pages;
-    if (typeof data?.hasNextPage === 'boolean') {
-      return data.hasNextPage ? currentPage + 1 : currentPage;
+  /* =========================
+     Home / Latest
+  ========================= */
+
+  async getTopRated(page = 1) {
+    return this.fetch(`/api/findbyrating?page=${page}`);
+  },
+
+  async getGenre(genre, page = 1) {
+    return this.fetch(
+      `/api/findbyGenre/${encodeURIComponent(genre)}?Page=${page}`
+    );
+  },
+
+  /* =========================
+     Search
+  ========================= */
+
+  async search(query) {
+    return this.fetch(
+      `/api/search/${encodeURIComponent(query)}`
+    );
+  },
+
+  async searchAll(query, page = 1) {
+    return this.fetch(
+      `/api/searchall/${encodeURIComponent(query)}?page=${page}`
+    );
+  },
+
+  /* =========================
+     Anime Info
+  ========================= */
+
+  async getInfo(idOrSlug) {
+    const data = await this.fetch(
+      `/api/info/${idOrSlug}`
+    );
+
+    if (data.ImagePath) {
+      data.ImagePath = this.fixImage(data.ImagePath);
     }
-    return 1;
+
+    if (data.Cover) {
+      data.Cover = this.fixImage(data.Cover);
+    }
+
+    return data;
   },
 
-  getLatest() {
-    return this.fetch('/bacakomik/latest');
+  /* =========================
+     Full Details + Characters
+  ========================= */
+
+  async getFullDetails(id) {
+    const data = await this.fetch(
+      `/anime/api/details/${id}`
+    );
+
+    if (data?.local?.ImagePath) {
+      data.local.ImagePath = this.fixImage(
+        data.local.ImagePath
+      );
+    }
+
+    if (data?.local?.Cover) {
+      data.local.Cover = this.fixImage(
+        data.local.Cover
+      );
+    }
+
+    return data;
   },
 
-  getLibrary({ type = '', genre = '' } = {}) {
-    if (genre) return this.fetch(`/bacakomik/genre/${encodeURIComponent(genre)}`);
-    if (type)  return this.fetch(`/bacakomik/only/${encodeURIComponent(type)}`);
-    return this.fetch('/bacakomik/populer');
+  /* =========================
+     Episodes / Streaming
+  ========================= */
+
+  async getEpisodes(id) {
+    const data = await this.fetch(
+      `/v1/api/details/${id}`
+    );
+
+    const src = (link) =>
+      link?.replace('src=', '');
+
+    const episodes = [];
+
+    // Episode 1
+    if (data?.local?.link) {
+      episodes.push({
+        episode: 1,
+        link: src(data.local.link),
+      });
+    }
+
+    // Episode 2+
+    if (Array.isArray(data?.local?.ep)) {
+      data.local.ep.forEach((ep, index) => {
+        episodes.push({
+          episode: index + 2,
+          link: src(ep.link),
+        });
+      });
+    }
+
+    return episodes;
   },
 
-  getUnlimited() {
-    return this.fetch('/unlimited');
+  /* =========================
+     Find Anime
+  ========================= */
+
+  async findAnime(name) {
+    return this.fetch(
+      `/api/find/${encodeURIComponent(name)}`
+    );
   },
 
-  extractUnlimitedList(data) {
-    return data?.info ?? data?.animelist ?? data?.results ?? (Array.isArray(data) ? data : []);
-  },
+  /* =========================
+     Check Anime
+  ========================= */
 
-  getGenres() {
-    return this.fetch('/api/check');
-  },
-
-  search(query) {
-    return this.fetch(`/bacakomik/search/${encodeURIComponent(query)}`);
-  },
-
-  getDetail(slug) {
-    return this.fetch(`/bacakomik/detail/${slug}`);
-  },
-
-  getChapter(slug) {
-    return this.fetch(`/bacakomik/chapter/${slug}`);
+  async checkAnime(name, genre) {
+    return this.fetch('/api/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        Name: name,
+        Genre: genre,
+      }),
+    });
   },
 };
+
+export default api;
